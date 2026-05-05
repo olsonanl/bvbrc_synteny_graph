@@ -90,7 +90,8 @@ sub process_synteny
     }
 
 
-    my @output_suffixes = ([qr/\.gexf$/, "gexf"],
+    my @output_suffixes = ([qr/\.gexf$/, "txt"],
+               [qr/\.gfa$/, "txt"],
 			   [qr/\.txt$/, "txt"]);
 
     my $outfile;
