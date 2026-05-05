@@ -83,15 +83,7 @@ sub process_synteny
 
     warn Dumper(\@cmd, $params_to_app);
 
-    my $stdout = '';
-    my $stderr = '';
-    my $ok = run \@cmd, '>', \$stdout, '2>', \$stderr;
-
-    warn "STDOUT:\n$stdout" if length $stdout;
-    warn "STDERR:\n$stderr" if length $stderr;É
-
-    
-    #my $ok = run(\@cmd);
+    my $ok = run(\@cmd);
     if (!$ok)
     {
 	die "Command failed: @cmd\n";
