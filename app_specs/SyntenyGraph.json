@@ -56,7 +56,7 @@
     {
       "id": "alpha",
       "required": 1,
-      "default": "patric_pgfam",
+      "default": "pgfam_id",
       "label": "Alphabet to use to group genes",
       "desc": "Alphabet to use to group genes",
       "type": "string"
