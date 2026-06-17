@@ -41,6 +41,7 @@ all: bin
 
 bin: venv $(BIN_PERL) $(BIN_SERVICE_PERL)
 
+
 # --- LOCAL BUILD ENVIRONMENT ---
 .PHONY: venv
 venv:
@@ -58,12 +59,16 @@ deploy-client: deploy-libs deploy-scripts deploy-docs
 
 deploy-service: deploy-libs deploy-scripts deploy-service-scripts deploy-specs deploy-venv
 
+
 # --- TARGET DEPLOYMENT ENVIRONMENT ---
 deploy-venv:
 	rm -rf $(TARGET_VENV)
 	$(DEPLOY_RUNTIME)/bin/python3 -m venv $(TARGET_VENV)
 	. $(TARGET_VENV)/bin/activate; pip3 install $(PANACONDA_REPO)
 	wget -qO $(TARGET_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL) || curl -L -o $(TARGET_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL)
+	# BV-BRC Hygiene: Isolate the app executables from the venv's python binaries
+	mkdir -p $(TARGET_VENV)/app-bin
+	ln -s ../bin/panaconda ../bin/gexf_layout.jar $(TARGET_VENV)/app-bin
 
 deploy-specs:
 	mkdir -p $(TARGET)/services/$(APP_SERVICE)
@@ -73,7 +78,7 @@ deploy-service-scripts:
 	export KB_TOP=$(TARGET); \
 	export KB_RUNTIME=$(DEPLOY_RUNTIME); \
 	export KB_PERL_PATH=$(TARGET)/lib ; \
-	export PATH_ADDITIONS=$(TARGET_VENV)/bin; \
+	export PATH_ADDITIONS=$(TARGET_VENV)/app-bin; \
 	for src in $(SRC_SERVICE_PERL) ; do \
 	        basefile=`basename $$src`; \
 	        base=`basename $$src .pl`; \
@@ -81,6 +86,14 @@ deploy-service-scripts:
 	        cp $$src $(TARGET)/plbin ; \
 	        $(WRAP_PERL_SCRIPT) "$(TARGET)/plbin/$$basefile" $(TARGET)/bin/$$base ; \
 	done
+
+$(BIN_DIR)/%: service-scripts/%.pl $(TOP_DIR)/user-env.sh
+	export PATH_ADDITIONS=$(BUILD_VENV)/app-bin; \
+	$(WRAP_PERL_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+
+$(BIN_DIR)/%: service-scripts/%.py $(TOP_DIR)/user-env.sh
+	export PATH_ADDITIONS=$(BUILD_VENV)/app-bin; \
+	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
 deploy-dir:
 	if [ ! -d $(SERVICE_DIR) ] ; then mkdir $(SERVICE_DIR) ; fi
