@@ -79,7 +79,7 @@ sub process_synteny
     #/home/asw3xp/projects/git_repos/cid_work/pangenome_graphs/fam_to_graph.py
     ##my @cmd = ("fam_to_graph.py", "--ksize", $params_to_app->{ksize}, "--diversity", $params_to_app->{diversity},\
     
-    my @cmd = ("python", "fam_to_graph.py", "--ksize", $params_to_app->{ksize}, "--diversity", $params_to_app->{diversity},"--alpha", $params_to_app->{alpha}, "--layout", "--context", $params_to_app->{context}, "--output", "$work_dir/ps_graph.gexf", "--gfa", "$work_dir/ps_graph.gfa", "--patric_genomes", $gdesc);
+    my @cmd = ("panaconda", "--ksize", $params_to_app->{ksize}, "--diversity", $params_to_app->{diversity},"--alpha", $params_to_app->{alpha}, "--layout", "--context", $params_to_app->{context}, "--output", "$work_dir/ps_graph.gexf", "--gfa", "$work_dir/ps_graph.gfa", "--patric_genomes", $gdesc);
 
     warn Dumper(\@cmd, $params_to_app);
 

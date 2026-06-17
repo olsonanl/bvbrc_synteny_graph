@@ -6,7 +6,7 @@ THIS_APP = $(shell basename $(shell pwd))
 # --- PANACONDA / PYTHON DEPENDENCIES ---
 PANACONDA_REPO = git+https://github.com/aswarren/pangenome_graphs.git
 # NOTE: Update version tag if necessary
-LAYOUT_JAR_URL = https://github.com/aswarren/pangenome_layout/releases/download/v1.0.0/gexf_layout.jar
+LAYOUT_JAR_URL = https://github.com/aswarren/pangenome_layout/releases/download/initial/gexf_layout.jar
 
 BUILD_VENV = $(shell pwd)/venv
 TARGET_VENV = $(TARGET)/venv/$(THIS_APP)
