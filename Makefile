@@ -1,6 +1,16 @@
 TOP_DIR = ../..
 include $(TOP_DIR)/tools/Makefile.common
 
+THIS_APP = $(shell basename $(shell pwd))
+
+# --- PANACONDA / PYTHON DEPENDENCIES ---
+PANACONDA_REPO = git+https://github.com/aswarren/pangenome_graphs.git
+# NOTE: Update version tag if necessary
+LAYOUT_JAR_URL = https://github.com/aswarren/pangenome_layout/releases/download/initial/gexf_layout.jar
+
+BUILD_VENV = $(shell pwd)/venv
+TARGET_VENV = $(TARGET)/venv/$(THIS_APP)
+
 DEPLOY_RUNTIME ?= /kb/runtime
 TARGET ?= /kb/deployment
 
@@ -29,13 +39,36 @@ TPAGE_ARGS = --define kb_top=$(TARGET) --define kb_runtime=$(DEPLOY_RUNTIME) --d
 
 all: bin 
 
-bin: $(BIN_PERL) $(BIN_SERVICE_PERL)
+bin: venv $(BIN_PERL) $(BIN_SERVICE_PERL)
+
+
+# --- LOCAL BUILD ENVIRONMENT ---
+.PHONY: venv
+venv:
+	rm -rf $(BUILD_VENV)
+	python3 -m venv $(BUILD_VENV)
+	. $(BUILD_VENV)/bin/activate; pip3 install $(PANACONDA_REPO)
+	wget -qO $(BUILD_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL) || curl -L -o $(BUILD_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL)
+	# BV-BRC Hygiene: Isolate the app executables from the venv's python binaries
+	mkdir -p $(BUILD_VENV)/app-bin
+	ln -s ../bin/panaconda ../bin/gexf_layout.jar $(BUILD_VENV)/app-bin
 
 deploy: deploy-all
-deploy-all: deploy-client 
+deploy-all: deploy-client deploy-service
 deploy-client: deploy-libs deploy-scripts deploy-docs
 
-deploy-service: deploy-libs deploy-scripts deploy-service-scripts deploy-specs
+deploy-service: deploy-libs deploy-scripts deploy-service-scripts deploy-specs deploy-venv
+
+
+# --- TARGET DEPLOYMENT ENVIRONMENT ---
+deploy-venv:
+	rm -rf $(TARGET_VENV)
+	$(DEPLOY_RUNTIME)/bin/python3 -m venv $(TARGET_VENV)
+	. $(TARGET_VENV)/bin/activate; pip3 install $(PANACONDA_REPO)
+	wget -qO $(TARGET_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL) || curl -L -o $(TARGET_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL)
+	# BV-BRC Hygiene: Isolate the app executables from the venv's python binaries
+	mkdir -p $(TARGET_VENV)/app-bin
+	ln -s ../bin/panaconda ../bin/gexf_layout.jar $(TARGET_VENV)/app-bin
 
 deploy-specs:
 	mkdir -p $(TARGET)/services/$(APP_SERVICE)
@@ -45,6 +78,7 @@ deploy-service-scripts:
 	export KB_TOP=$(TARGET); \
 	export KB_RUNTIME=$(DEPLOY_RUNTIME); \
 	export KB_PERL_PATH=$(TARGET)/lib ; \
+	export PATH_ADDITIONS=$(TARGET_VENV)/app-bin; \
 	for src in $(SRC_SERVICE_PERL) ; do \
 	        basefile=`basename $$src`; \
 	        base=`basename $$src .pl`; \
@@ -53,6 +87,13 @@ deploy-service-scripts:
 	        $(WRAP_PERL_SCRIPT) "$(TARGET)/plbin/$$basefile" $(TARGET)/bin/$$base ; \
 	done
 
+$(BIN_DIR)/%: service-scripts/%.pl $(TOP_DIR)/user-env.sh
+	export PATH_ADDITIONS=$(BUILD_VENV)/app-bin; \
+	$(WRAP_PERL_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+
+$(BIN_DIR)/%: service-scripts/%.py $(TOP_DIR)/user-env.sh
+	export PATH_ADDITIONS=$(BUILD_VENV)/app-bin; \
+	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
 deploy-dir:
 	if [ ! -d $(SERVICE_DIR) ] ; then mkdir $(SERVICE_DIR) ; fi
@@ -60,14 +101,16 @@ deploy-dir:
 
 deploy-docs: 
 
-
 clean:
+	rm -rf $(BUILD_VENV)
 
-
+# --- WRAP LOCAL SCRIPTS ---
 $(BIN_DIR)/%: service-scripts/%.pl $(TOP_DIR)/user-env.sh
+	export PATH_ADDITIONS=$(BUILD_VENV)/bin; \
 	$(WRAP_PERL_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
 $(BIN_DIR)/%: service-scripts/%.py $(TOP_DIR)/user-env.sh
+	export PATH_ADDITIONS=$(BUILD_VENV)/bin; \
 	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
 include $(TOP_DIR)/tools/Makefile.common.rules
