@@ -4,7 +4,13 @@ include $(TOP_DIR)/tools/Makefile.common
 THIS_APP = $(shell basename $(shell pwd))
 
 # --- PANACONDA / PYTHON DEPENDENCIES ---
-PANACONDA_REPO = git+https://github.com/aswarren/pangenome_graphs.git
+# Cloned and pip-installed from a local checkout rather than via "pip install
+# git+...": the upstream repo has a stray gitlink (layout/pangenome_layout, mode
+# 160000) with no matching entry in .gitmodules, so pip's mandatory
+# "git submodule update --init --recursive" aborts. A plain clone skips submodule
+# init, and a local pip install never touches submodules. The package itself is a
+# single pure-Python module (src/fam_to_graph.py) and needs neither submodule.
+PANACONDA_REPO = https://github.com/BV-BRC-dependencies/pangenome_graphs.git
 # NOTE: Update version tag if necessary
 LAYOUT_JAR_URL = https://github.com/aswarren/pangenome_layout/releases/download/initial/gexf_layout.jar
 
@@ -47,7 +53,9 @@ bin: venv $(BIN_PERL) $(BIN_SERVICE_PERL)
 venv:
 	rm -rf $(BUILD_VENV)
 	python3 -m venv $(BUILD_VENV)
-	. $(BUILD_VENV)/bin/activate; pip3 install $(PANACONDA_REPO)
+	rm -rf $(BUILD_VENV)/pangenome_graphs.src
+	git clone $(PANACONDA_REPO) $(BUILD_VENV)/pangenome_graphs.src
+	. $(BUILD_VENV)/bin/activate; pip3 install $(BUILD_VENV)/pangenome_graphs.src
 	wget -qO $(BUILD_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL) || curl -L -o $(BUILD_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL)
 	# BV-BRC Hygiene: Isolate the app executables from the venv's python binaries
 	mkdir -p $(BUILD_VENV)/app-bin
@@ -64,7 +72,9 @@ deploy-service: deploy-libs deploy-scripts deploy-service-scripts deploy-specs d
 deploy-venv:
 	rm -rf $(TARGET_VENV)
 	$(DEPLOY_RUNTIME)/bin/python3 -m venv $(TARGET_VENV)
-	. $(TARGET_VENV)/bin/activate; pip3 install $(PANACONDA_REPO)
+	rm -rf $(TARGET_VENV)/pangenome_graphs.src
+	git clone $(PANACONDA_REPO) $(TARGET_VENV)/pangenome_graphs.src
+	. $(TARGET_VENV)/bin/activate; pip3 install $(TARGET_VENV)/pangenome_graphs.src
 	wget -qO $(TARGET_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL) || curl -L -o $(TARGET_VENV)/bin/gexf_layout.jar $(LAYOUT_JAR_URL)
 	# BV-BRC Hygiene: Isolate the app executables from the venv's python binaries
 	mkdir -p $(TARGET_VENV)/app-bin
