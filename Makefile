@@ -57,7 +57,7 @@ deploy: deploy-all
 deploy-all: deploy-client deploy-service
 deploy-client: deploy-libs deploy-scripts deploy-docs
 
-deploy-service: deploy-libs deploy-scripts deploy-service-scripts deploy-specs deploy-venv
+deploy-service: deploy-libs deploy-scripts deploy-custom-service-scripts deploy-specs deploy-venv
 
 
 # --- TARGET DEPLOYMENT ENVIRONMENT ---
@@ -74,11 +74,13 @@ deploy-specs:
 	mkdir -p $(TARGET)/services/$(APP_SERVICE)
 	rsync -arv app_specs $(TARGET)/services/$(APP_SERVICE)/.
 
-deploy-service-scripts:
+deploy-custom-service-scripts:
 	export KB_TOP=$(TARGET); \
 	export KB_RUNTIME=$(DEPLOY_RUNTIME); \
 	export KB_PERL_PATH=$(TARGET)/lib ; \
 	export PATH_ADDITIONS=$(TARGET_VENV)/app-bin; \
+	export WRAP_VARIABLES=PANACONDA_LAYOUT_JAR; \
+	export PANACONDA_LAYOUT_JAR=$(TARGET_VENV)/bin/gexf_layout.jar; \
 	for src in $(SRC_SERVICE_PERL) ; do \
 	        basefile=`basename $$src`; \
 	        base=`basename $$src .pl`; \
